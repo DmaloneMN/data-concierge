@@ -1,0 +1,4 @@
+metric_name,description,formula,source_table
+total_revenue,Total revenue from sales,SUM(sale_amount),sales_fact
+average_order_value,Average value per order,SUM(sale_amount)/COUNT(sale_id),sales_fact
+customer_count,Total unique customers,COUNT(DISTINCT customer_id),customer_dim

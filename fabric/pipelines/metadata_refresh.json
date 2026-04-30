@@ -1,0 +1,6 @@
+{
+  "name": "metadata_refresh",
+  "description": "Refreshes tables.csv and metrics.csv from Fabric lakehouse metadata.",
+  "schedule": "0 2 * * *",
+  "steps": []
+}

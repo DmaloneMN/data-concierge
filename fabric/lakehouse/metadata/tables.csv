@@ -1,0 +1,5 @@
+table_name,schema,description,primary_key
+sales_fact,sales,Sales transactions fact table,sale_id
+customer_dim,sales,Customer dimension table,customer_id
+product_dim,sales,Product dimension table,product_id
+date_dim,shared,Date dimension table,date_key

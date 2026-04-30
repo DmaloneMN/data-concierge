@@ -1,0 +1,6 @@
+{
+  "name": "sample_data_refresh",
+  "description": "Refreshes sample sales data parquet files in the lakehouse.",
+  "schedule": "0 3 * * 0",
+  "steps": []
+}

@@ -1,0 +1,8 @@
+[
+  {
+    "id": "001",
+    "user_message": "What was total revenue last month?",
+    "expected_sql": "SELECT SUM(sale_amount) FROM sales_fact WHERE sale_date >= DATEADD(month, -1, GETDATE())",
+    "expected_response_contains": "total revenue"
+  }
+]

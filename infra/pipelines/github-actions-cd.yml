@@ -1,0 +1,21 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Deploy Bicep
+        run: |
+          az deployment group create \
+            --resource-group ${{ secrets.AZURE_RG }} \
+            --template-file infra/bicep/main.bicep \
+            --parameters infra/environments/prod.json

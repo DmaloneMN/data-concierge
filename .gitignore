@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+.venv/
+venv/
+dist/
+build/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Azure
+*.bicepparam
+local.settings.json
+
+# Data
+*.parquet
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,8 @@
+{ 
+  "environmentName": "dev",
+  "location": "eastus",
+  "tags": {
+    "environment": "dev",
+    "project": "data-concierge"
+  }
+}
