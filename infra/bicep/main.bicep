@@ -51,6 +51,7 @@ module keyVault './key_vault.bicep' = {
   }
 }
 
+// When deployAcr=false, we avoid referencing acr module outputs altogether to keep bicep warnings clean.
 module acr './acr.bicep' = if (deployAcr) {
   name: 'acr-${suffix}'
   params: {
@@ -61,8 +62,8 @@ module acr './acr.bicep' = if (deployAcr) {
   }
 }
 
-module containerApps './container_apps.bicep' = {
-  name: 'ca-${suffix}'
+module containerAppsWithAcr './container_apps.bicep' = if (deployAcr) {
+  name: 'ca-${suffix}-with-acr'
   params: {
     location: location
     environmentName: environmentName
@@ -70,12 +71,25 @@ module containerApps './container_apps.bicep' = {
     apiImage: apiImage
     keyVaultUri: keyVault.outputs.vaultUri
     keyVaultName: keyVault.outputs.vaultName
-    deployAcr: deployAcr
-    acrLoginServer: deployAcr ? acr.outputs.loginServer : ''
-    acrId: deployAcr ? acr.outputs.acrId : ''
+    deployAcr: true
+    acrLoginServer: acr.outputs.loginServer
+    acrId: acr.outputs.acrId
+  }
+}
+
+module containerAppsNoAcr './container_apps.bicep' = if (!deployAcr) {
+  name: 'ca-${suffix}-no-acr'
+  params: {
+    location: location
+    environmentName: environmentName
+    namePrefix: namePrefix
+    apiImage: apiImage
+    keyVaultUri: keyVault.outputs.vaultUri
+    keyVaultName: keyVault.outputs.vaultName
+    deployAcr: false
   }
 }
 
 output acrLoginServer string = deployAcr ? acr.outputs.loginServer : ''
 output keyVaultName string = keyVault.outputs.vaultName
-output containerAppName string = containerApps.outputs.containerAppName
+output containerAppName string = deployAcr ? containerAppsWithAcr.outputs.containerAppName : containerAppsNoAcr.outputs.containerAppName

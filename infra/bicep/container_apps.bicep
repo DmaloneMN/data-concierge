@@ -142,9 +142,11 @@ resource app 'Microsoft.App/containerApps@2023-08-01-preview' = {
               value: '@Microsoft.KeyVault(SecretUri=${keyVaultUri}secrets/MODEL-DEPLOYMENT)'
             }
           ]
+          // Consumption plan constraint: CPU + memory must be one of the supported pairs.
+          // 0.5 CPU + 1.0Gi is a valid combination.
           resources: {
-            cpu: 1
-            memory: '1Gi'
+            cpu: 0.5
+            memory: '1.0Gi'
           }
         }
       ]
