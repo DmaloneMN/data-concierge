@@ -1,5 +1,59 @@
 // key_vault.bicep - Azure Key Vault deployment
-// TODO: Define Key Vault and access policies
+
+targetScope = 'resourceGroup'
 
 param location string
 param environmentName string
+param namePrefix string = 'dc'
+
+@secure()
+param azureOpenAiEndpoint string
+
+@secure()
+param azureOpenAiApiKey string
+
+param modelDeployment string
+
+var kvName = toLower('${namePrefix}-kv-${environmentName}-${uniqueString(resourceGroup().id)}')
+
+resource kv 'Microsoft.KeyVault/vaults@2023-07-01' = {
+  name: kvName
+  location: location
+  properties: {
+    tenantId: subscription().tenantId
+    enableRbacAuthorization: true
+    sku: {
+      family: 'A'
+      name: 'standard'
+    }
+    enabledForDeployment: false
+    enabledForTemplateDeployment: true
+    enabledForDiskEncryption: false
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+// Secrets (RBAC access is required to read them)
+resource secretOpenAiEndpoint 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  name: '${kv.name}/AZURE-OPENAI-ENDPOINT'
+  properties: {
+    value: azureOpenAiEndpoint
+  }
+}
+
+resource secretOpenAiKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  name: '${kv.name}/AZURE-OPENAI-API-KEY'
+  properties: {
+    value: azureOpenAiApiKey
+  }
+}
+
+resource secretModelDeployment 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  name: '${kv.name}/MODEL-DEPLOYMENT'
+  properties: {
+    value: modelDeployment
+  }
+}
+
+output vaultName string = kv.name
+output vaultUri string = kv.properties.vaultUri

@@ -1,6 +1,9 @@
 { 
   "environmentName": "test",
   "location": "eastus",
+  "namePrefix": "dc",
+  "modelDeployment": "gpt-4o",
+  "apiImage": "",
   "tags": {
     "environment": "test",
     "project": "data-concierge"
