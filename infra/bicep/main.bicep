@@ -61,13 +61,8 @@ module containerApps './container_apps.bicep' = {
     keyVaultUri: keyVault.outputs.vaultUri
     keyVaultName: keyVault.outputs.vaultName
   }
-  dependsOn: [
-    acr
-    keyVault
-  ]
 }
 
 output acrLoginServer string = acr.outputs.loginServer
 output keyVaultName string = keyVault.outputs.vaultName
 output containerAppName string = containerApps.outputs.containerAppName
-output containerAppFqdn string = containerApps.outputs.containerAppFqdn

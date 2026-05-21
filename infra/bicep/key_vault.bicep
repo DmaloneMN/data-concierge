@@ -35,21 +35,24 @@ resource kv 'Microsoft.KeyVault/vaults@2023-07-01' = {
 
 // Secrets (RBAC access is required to read them)
 resource secretOpenAiEndpoint 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  name: '${kv.name}/AZURE-OPENAI-ENDPOINT'
+  name: 'AZURE-OPENAI-ENDPOINT'
+  parent: kv
   properties: {
     value: azureOpenAiEndpoint
   }
 }
 
 resource secretOpenAiKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  name: '${kv.name}/AZURE-OPENAI-API-KEY'
+  name: 'AZURE-OPENAI-API-KEY'
+  parent: kv
   properties: {
     value: azureOpenAiApiKey
   }
 }
 
 resource secretModelDeployment 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  name: '${kv.name}/MODEL-DEPLOYMENT'
+  name: 'MODEL-DEPLOYMENT'
+  parent: kv
   properties: {
     value: modelDeployment
   }

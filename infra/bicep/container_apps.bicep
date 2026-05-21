@@ -56,10 +56,15 @@ resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-3
   location: location
 }
 
+// Role assignment name must be computed from stable values known at deployment start.
+// (principalId is not available at compile-time, but identity resourceId is.)
+var acrPullAssignmentName = guid(acrId, appIdentity.id, 'acrpull')
+var kvSecretsUserAssignmentName = guid(resourceId('Microsoft.KeyVault/vaults', keyVaultName), appIdentity.id, 'kv-secrets-user')
+
 // RBAC: allow Container Apps identity to pull from ACR
 resource acrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(acrId, appIdentity.properties.principalId, 'acrpull')
-  scope: acrId
+  name: acrPullAssignmentName
+  scope: resourceId('Microsoft.ContainerRegistry/registries', last(split(acrId, '/')))
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
     principalId: appIdentity.properties.principalId
@@ -69,7 +74,7 @@ resource acrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 
 // RBAC: allow identity to read Key Vault secrets
 resource kvSecretsUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(resourceGroup().id, keyVaultName, appIdentity.properties.principalId, 'kvsecretsuser')
+  name: kvSecretsUserAssignmentName
   scope: resourceId('Microsoft.KeyVault/vaults', keyVaultName)
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6') // Key Vault Secrets User
@@ -102,7 +107,6 @@ resource app 'Microsoft.App/containerApps@2023-08-01-preview' = {
           identity: appIdentity.id
         }
       ]
-      secrets: []
     }
     template: {
       containers: [
@@ -140,12 +144,10 @@ resource app 'Microsoft.App/containerApps@2023-08-01-preview' = {
     }
   }
   dependsOn: [
-    cae
     acrPullRole
     kvSecretsUserRole
   ]
 }
 
 output containerAppName string = app.name
-output containerAppFqdn string = app.properties.configuration.ingress.fqdn
 output managedEnvironmentName string = cae.name
