@@ -17,6 +17,10 @@ This runbook covers deploying the core infrastructure needed for Data Concierge:
 - Bicep installed (`az bicep version`)
 - Logged in: `az login`
 
+### 0) IMPORTANT: rotate secrets if leaked
+
+If you ever paste an API key into chat logs or terminals that are recorded, rotate it immediately in Azure.
+
 ### 1) Create a resource group
 
 ```bash
@@ -38,7 +42,7 @@ Run what-if:
 az deployment group create \
   --resource-group rg-data-concierge-dev \
   --template-file infra/bicep/main.bicep \
-  --parameters @infra/environments/dev.json \
+  --parameters @infra/environments/dev.parameters.json \
   --parameters azureOpenAiEndpoint="$AZURE_OPENAI_ENDPOINT" azureOpenAiApiKey="$AZURE_OPENAI_API_KEY" \
   --what-if
 ```
@@ -49,7 +53,7 @@ az deployment group create \
 az deployment group create \
   --resource-group rg-data-concierge-dev \
   --template-file infra/bicep/main.bicep \
-  --parameters @infra/environments/dev.json \
+  --parameters @infra/environments/dev.parameters.json \
   --parameters azureOpenAiEndpoint="$AZURE_OPENAI_ENDPOINT" azureOpenAiApiKey="$AZURE_OPENAI_API_KEY"
 ```
 
@@ -75,7 +79,7 @@ Re-run the deployment passing `apiImage`:
 az deployment group create \
   --resource-group rg-data-concierge-dev \
   --template-file infra/bicep/main.bicep \
-  --parameters @infra/environments/dev.json \
+  --parameters @infra/environments/dev.parameters.json \
   --parameters apiImage="$ACR_LOGIN_SERVER/data-concierge-api:latest" \
   --parameters azureOpenAiEndpoint="$AZURE_OPENAI_ENDPOINT" azureOpenAiApiKey="$AZURE_OPENAI_API_KEY"
 ```

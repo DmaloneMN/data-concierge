@@ -141,7 +141,7 @@ resource app 'Microsoft.App/containerApps@2023-08-01-preview' = {
             }
           ]
           resources: {
-            cpu: '0.5'
+            cpu: 1
             memory: '1Gi'
           }
         }
