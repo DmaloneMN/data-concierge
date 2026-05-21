@@ -56,15 +56,24 @@ resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-3
   location: location
 }
 
+// Existing resources for RBAC scopes (scope must be a resource object, not a string)
+resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
+  name: last(split(acrId, '/'))
+}
+
+resource kv 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
+  name: keyVaultName
+}
+
 // Role assignment name must be computed from stable values known at deployment start.
 // (principalId is not available at compile-time, but identity resourceId is.)
-var acrPullAssignmentName = guid(acrId, appIdentity.id, 'acrpull')
-var kvSecretsUserAssignmentName = guid(resourceId('Microsoft.KeyVault/vaults', keyVaultName), appIdentity.id, 'kv-secrets-user')
+var acrPullAssignmentName = guid(acr.id, appIdentity.id, 'acrpull')
+var kvSecretsUserAssignmentName = guid(kv.id, appIdentity.id, 'kv-secrets-user')
 
 // RBAC: allow Container Apps identity to pull from ACR
 resource acrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: acrPullAssignmentName
-  scope: resourceId('Microsoft.ContainerRegistry/registries', last(split(acrId, '/')))
+  scope: acr
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
     principalId: appIdentity.properties.principalId
@@ -75,7 +84,7 @@ resource acrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 // RBAC: allow identity to read Key Vault secrets
 resource kvSecretsUserRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: kvSecretsUserAssignmentName
-  scope: resourceId('Microsoft.KeyVault/vaults', keyVaultName)
+  scope: kv
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6') // Key Vault Secrets User
     principalId: appIdentity.properties.principalId
