@@ -14,6 +14,14 @@ param namePrefix string = 'dc'
 @description('Container image to deploy for the API (e.g. myacr.azurecr.io/data-concierge-api:latest)')
 param apiImage string = ''
 
+@description('ACR SKU. Some subscriptions/regions only support Basic.')
+@allowed([
+  'Basic'
+  'Standard'
+  'Premium'
+])
+param acrSku string = 'Basic'
+
 @description('Azure OpenAI endpoint (for initial bootstrap; will be stored in Key Vault)')
 @secure()
 param azureOpenAiEndpoint string
@@ -34,6 +42,7 @@ module acr './acr.bicep' = {
     location: location
     environmentName: environmentName
     namePrefix: namePrefix
+    acrSku: acrSku
   }
 }
 

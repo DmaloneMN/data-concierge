@@ -6,6 +6,7 @@
     "location": { "value": "eastus" },
     "namePrefix": { "value": "dc" },
     "modelDeployment": { "value": "gpt-4o" },
-    "apiImage": { "value": "" }
+    "apiImage": { "value": "" },
+    "acrSku": { "value": "Basic" }
   }
 }
