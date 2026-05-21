@@ -11,10 +11,13 @@ param environmentName string
 @description('Optional resource name prefix to ensure global uniqueness')
 param namePrefix string = 'dc'
 
-@description('Container image to deploy for the API (e.g. myacr.azurecr.io/data-concierge-api:latest)')
+@description('Container image to deploy for the API (can be public for dev if ACR is disabled)')
 param apiImage string = ''
 
-@description('ACR SKU. Some subscriptions/regions only support Basic.')
+@description('Whether to deploy Azure Container Registry (ACR). Some subscriptions/policies disallow ACR creation.')
+param deployAcr bool = true
+
+@description('ACR SKU. Some subscriptions/regions only support specific tiers; some disallow ACR entirely.')
 @allowed([
   'Basic'
   'Standard'
@@ -36,16 +39,6 @@ param modelDeployment string = 'gpt-4o'
 // Resource name helpers
 var suffix = toLower('${namePrefix}-${environmentName}-${uniqueString(resourceGroup().id)}')
 
-module acr './acr.bicep' = {
-  name: 'acr-${suffix}'
-  params: {
-    location: location
-    environmentName: environmentName
-    namePrefix: namePrefix
-    acrSku: acrSku
-  }
-}
-
 module keyVault './key_vault.bicep' = {
   name: 'kv-${suffix}'
   params: {
@@ -58,20 +51,31 @@ module keyVault './key_vault.bicep' = {
   }
 }
 
+module acr './acr.bicep' = if (deployAcr) {
+  name: 'acr-${suffix}'
+  params: {
+    location: location
+    environmentName: environmentName
+    namePrefix: namePrefix
+    acrSku: acrSku
+  }
+}
+
 module containerApps './container_apps.bicep' = {
   name: 'ca-${suffix}'
   params: {
     location: location
     environmentName: environmentName
     namePrefix: namePrefix
-    acrLoginServer: acr.outputs.loginServer
-    acrId: acr.outputs.acrId
     apiImage: apiImage
     keyVaultUri: keyVault.outputs.vaultUri
     keyVaultName: keyVault.outputs.vaultName
+    deployAcr: deployAcr
+    acrLoginServer: deployAcr ? acr.outputs.loginServer : ''
+    acrId: deployAcr ? acr.outputs.acrId : ''
   }
 }
 
-output acrLoginServer string = acr.outputs.loginServer
+output acrLoginServer string = deployAcr ? acr.outputs.loginServer : ''
 output keyVaultName string = keyVault.outputs.vaultName
 output containerAppName string = containerApps.outputs.containerAppName

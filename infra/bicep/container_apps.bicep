@@ -6,13 +6,7 @@ param location string
 param environmentName string
 param namePrefix string = 'dc'
 
-@description('ACR login server, e.g. myacr.azurecr.io')
-param acrLoginServer string
-
-@description('ACR resource id')
-param acrId string
-
-@description('API container image full reference')
+@description('API container image full reference (public OK when deployAcr=false)')
 param apiImage string
 
 @description('Key Vault URI (https://<name>.vault.azure.net/)')
@@ -20,6 +14,15 @@ param keyVaultUri string
 
 @description('Key Vault name')
 param keyVaultName string
+
+@description('Whether ACR is deployed/used for this environment')
+param deployAcr bool = true
+
+@description('ACR login server, e.g. myacr.azurecr.io (required when deployAcr=true)')
+param acrLoginServer string = ''
+
+@description('ACR resource id (required when deployAcr=true)')
+param acrId string = ''
 
 var lawName = toLower('${namePrefix}-law-${environmentName}-${uniqueString(resourceGroup().id)}')
 var caeName = toLower('${namePrefix}-cae-${environmentName}-${uniqueString(resourceGroup().id)}')
@@ -50,14 +53,14 @@ resource cae 'Microsoft.App/managedEnvironments@2023-08-01-preview' = {
   }
 }
 
-// Managed identity for the app (for Key Vault access and ACR pull)
+// Managed identity for the app (for Key Vault access and optionally ACR pull)
 resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: '${appName}-id'
   location: location
 }
 
 // Existing resources for RBAC scopes (scope must be a resource object, not a string)
-resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
+resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = if (deployAcr) {
   name: last(split(acrId, '/'))
 }
 
@@ -65,13 +68,12 @@ resource kv 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
   name: keyVaultName
 }
 
-// Role assignment name must be computed from stable values known at deployment start.
-// (principalId is not available at compile-time, but identity resourceId is.)
-var acrPullAssignmentName = guid(acr.id, appIdentity.id, 'acrpull')
+// Stable role assignment names
+var acrPullAssignmentName = deployAcr ? guid(acr.id, appIdentity.id, 'acrpull') : guid(resourceGroup().id, appIdentity.id, 'acrpull-disabled')
 var kvSecretsUserAssignmentName = guid(kv.id, appIdentity.id, 'kv-secrets-user')
 
-// RBAC: allow Container Apps identity to pull from ACR
-resource acrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+// RBAC: allow Container Apps identity to pull from ACR (only if using ACR)
+resource acrPullRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployAcr) {
   name: acrPullAssignmentName
   scope: acr
   properties: {
@@ -110,12 +112,12 @@ resource app 'Microsoft.App/containerApps@2023-08-01-preview' = {
         targetPort: 8000
         transport: 'auto'
       }
-      registries: [
+      registries: deployAcr ? [
         {
           server: acrLoginServer
           identity: appIdentity.id
         }
-      ]
+      ] : []
     }
     template: {
       containers: [
@@ -153,8 +155,8 @@ resource app 'Microsoft.App/containerApps@2023-08-01-preview' = {
     }
   }
   dependsOn: [
-    acrPullRole
     kvSecretsUserRole
+    acrPullRole
   ]
 }
 

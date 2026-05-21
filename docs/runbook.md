@@ -2,11 +2,13 @@
 
 This runbook covers deploying the core infrastructure needed for Data Concierge:
 
-- Azure Container Registry (ACR)
 - Azure Key Vault + secrets
 - Log Analytics Workspace
 - Azure Container Apps Environment
 - Container App (internal ingress only)
+
+Optionally:
+- Azure Container Registry (ACR)
 
 > Note: With internal ingress, you will not be able to hit the app directly from the public internet.
 > In Week 3/4, we typically add API Management (and optionally VNet integration) as the secure front door.
@@ -57,9 +59,20 @@ az deployment group create \
   --parameters azureOpenAiEndpoint="$AZURE_OPENAI_ENDPOINT" azureOpenAiApiKey="$AZURE_OPENAI_API_KEY"
 ```
 
-### 4) Build + push the API image
+### 4) Image strategy
 
-After deployment completes, get the ACR login server from outputs.
+This repo supports two paths:
+
+#### Path A: No ACR (for restricted subscriptions)
+
+If your subscription/policies disallow ACR creation, set `deployAcr=false` and use a public image (e.g. MCR)
+for the first deploy. This validates Key Vault, managed identity, role assignments, Container Apps environment, etc.
+
+Later, when you have an approved registry (central ACR or GHCR), switch `apiImage` and (optionally) enable ACR.
+
+#### Path B: ACR
+
+If ACR is allowed, set `deployAcr=true`, deploy, then build/push your API image and re-run deployment with `apiImage`.
 
 ```bash
 # Example (replace values)
@@ -69,17 +82,4 @@ az acr login --name "${ACR_LOGIN_SERVER%%.*}"
 docker build -t data-concierge-api .
 docker tag data-concierge-api $ACR_LOGIN_SERVER/data-concierge-api:latest
 docker push $ACR_LOGIN_SERVER/data-concierge-api:latest
-```
-
-### 5) Update the Container App with image
-
-Re-run the deployment passing `apiImage`:
-
-```bash
-az deployment group create \
-  --resource-group rg-data-concierge-dev \
-  --template-file infra/bicep/main.bicep \
-  --parameters @infra/environments/dev.parameters.json \
-  --parameters apiImage="$ACR_LOGIN_SERVER/data-concierge-api:latest" \
-  --parameters azureOpenAiEndpoint="$AZURE_OPENAI_ENDPOINT" azureOpenAiApiKey="$AZURE_OPENAI_API_KEY"
 ```
