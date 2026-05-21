@@ -6,7 +6,7 @@
     "location": { "value": "eastus" },
     "namePrefix": { "value": "dc" },
     "modelDeployment": { "value": "gpt-4o" },
-    "apiImage": { "value": "mcr.microsoft.com/azuredocs/containerapps-helloworld:latest" },
+    "apiImage": { "value": "ghcr.io/dmalonemn/data-concierge-api:latest" },
     "deployAcr": { "value": false },
     "acrSku": { "value": "Basic" }
   }

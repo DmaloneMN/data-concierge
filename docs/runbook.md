@@ -65,10 +65,16 @@ This repo supports two paths:
 
 #### Path A: No ACR (for restricted subscriptions)
 
-If your subscription/policies disallow ACR creation, set `deployAcr=false` and use a public image (e.g. MCR)
+If your subscription/policies disallow ACR creation, set `deployAcr=false` and use a public image
 for the first deploy. This validates Key Vault, managed identity, role assignments, Container Apps environment, etc.
 
-Later, when you have an approved registry (central ACR or GHCR), switch `apiImage` and (optionally) enable ACR.
+**Public GHCR example**
+
+- Build/push image to: `ghcr.io/<org-or-user>/data-concierge-api:latest`
+- Update `infra/environments/dev.parameters.json` `apiImage` to that value
+- Re-run the deployment
+
+> If GHCR is private, you must configure registry credentials for Container Apps. (Not yet implemented in this repo.)
 
 #### Path B: ACR
 
