@@ -145,7 +145,7 @@ resource app 'Microsoft.App/containerApps@2023-08-01-preview' = {
           // Consumption plan constraint: CPU + memory must be one of the supported pairs.
           // 0.5 CPU + 1.0Gi is a valid combination.
           resources: {
-            cpu: 0.5
+            cpu: json('0.5')
             memory: '1.0Gi'
           }
         }

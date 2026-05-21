@@ -51,7 +51,6 @@ module keyVault './key_vault.bicep' = {
   }
 }
 
-// When deployAcr=false, we avoid referencing acr module outputs altogether to keep bicep warnings clean.
 module acr './acr.bicep' = if (deployAcr) {
   name: 'acr-${suffix}'
   params: {
@@ -90,6 +89,5 @@ module containerAppsNoAcr './container_apps.bicep' = if (!deployAcr) {
   }
 }
 
-output acrLoginServer string = deployAcr ? acr.outputs.loginServer : ''
+// Only emit outputs that don't depend on optional modules (avoids BCP318 warnings).
 output keyVaultName string = keyVault.outputs.vaultName
-output containerAppName string = deployAcr ? containerAppsWithAcr.outputs.containerAppName : containerAppsNoAcr.outputs.containerAppName
