@@ -55,6 +55,7 @@ def _execute_sql_sync(sql: str) -> dict:
             return {"columns": [], "rows": [], "row_count": 0}
 
         columns = [col[0] for col in cursor.description]
+        # Fetch one extra row so we can signal whether the result set was truncated.
         rows = cursor.fetchmany(MAX_ROWS + 1)
         truncated = len(rows) > MAX_ROWS
         results = [dict(zip(columns, row)) for row in rows[:MAX_ROWS]]

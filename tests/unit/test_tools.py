@@ -211,13 +211,14 @@ def test_execute_sql_truncates_results(monkeypatch):
     cursor = MagicMock()
     cursor.description = [("id",), ("name",)]
     cursor.execute.return_value = None
+    # Return MAX_ROWS + 1 rows so execute_sql can flag truncation.
     cursor.fetchmany.return_value = [(1, "a"), (2, "b"), (3, "c")]
-    
+
     connection = MagicMock()
     connection.__enter__.return_value = connection
     connection.__exit__.return_value = None
     connection.cursor.return_value = cursor
-    
+
     pyodbc = MagicMock()
     pyodbc.connect.return_value = connection
 
