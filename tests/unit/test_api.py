@@ -9,6 +9,12 @@ from src.api.main import app
 client = TestClient(app)
 
 
+def test_root():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.json() == {"service": "Data Concierge API", "docs": "/docs"}
+
+
 def test_health():
     response = client.get("/health")
     assert response.status_code == 200
@@ -21,6 +27,7 @@ def test_chat_success(mock_agent):
         return_value={
             "answer": "Total revenue was $1M.",
             "sql": "SELECT SUM(sale_amount) FROM sales_fact",
+            "results": {"columns": ["total_revenue"], "rows": [{"total_revenue": 1000000}]},
         }
     )
     response = client.post(
@@ -30,6 +37,7 @@ def test_chat_success(mock_agent):
     data = response.json()
     assert "message" in data
     assert "sql" in data
+    assert "results" in data
 
 
 @patch("src.api.routers.chat._agent")

@@ -19,7 +19,11 @@ _agent = CoreAgent(AgentConfig())
 async def chat(request: ChatRequest):
     try:
         result = await _agent.run(request.message)
-        return ChatResponse(message=result["answer"], sql=result.get("sql"))
+        return ChatResponse(
+            message=result["answer"],
+            sql=result.get("sql"),
+            results=result.get("results"),
+        )
     except Exception as e:
         logger.exception("Chat failed: %s", e)
         raise HTTPException(status_code=500, detail="Agent encountered an error.")

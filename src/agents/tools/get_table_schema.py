@@ -1,6 +1,9 @@
 """Tool: Get Table Schema.
 
 Reads table metadata from fabric/lakehouse/metadata/tables.csv for local dev.
+
+Callers should format the returned dict with src.shared.utils.format_schema_context
+before passing it to generate_sql for LLM context.
 """
 
 import csv
@@ -14,6 +17,7 @@ METADATA_PATH = os.getenv("TABLES_METADATA_PATH", "fabric/lakehouse/metadata/tab
 
 
 def get_table_schema(table_name: str) -> dict:
+    """Return table metadata for the requested table name."""
     logger.info("Looking up schema for table: %s", table_name)
 
     if not os.path.exists(METADATA_PATH):

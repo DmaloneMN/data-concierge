@@ -26,5 +26,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+@app.get("/", include_in_schema=False)
+async def root():
+    return {"service": "Data Concierge API", "docs": "/docs"}
+
+
 app.include_router(health.router, tags=["Health"])
 app.include_router(chat.router, prefix="/chat", tags=["Chat"])

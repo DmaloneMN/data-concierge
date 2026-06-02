@@ -1,6 +1,5 @@
 """Prompt regression tests against golden responses."""
 import json
-import pytest
 
 GOLDEN_PATH = "tests/prompts/golden_responses/sample_cases.json"
 

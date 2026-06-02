@@ -3,7 +3,7 @@
 Uses Azure OpenAI to generate SQL using the sql_generator_prompt.txt.
 """
 
-from openai import AzureOpenAI
+from openai import AsyncAzureOpenAI
 
 from src.shared.config import config
 from src.shared.logging import get_logger
@@ -13,13 +13,13 @@ logger = get_logger(__name__)
 
 PROMPT_PATH = "src/agents/prompts/tools/sql_generator_prompt.txt"
 
-_client: AzureOpenAI | None = None
+_client: AsyncAzureOpenAI | None = None
 
 
-def _get_client() -> AzureOpenAI:
+def _get_client() -> AsyncAzureOpenAI:
     global _client
     if _client is None:
-        _client = AzureOpenAI(
+        _client = AsyncAzureOpenAI(
             azure_endpoint=config.AZURE_OPENAI_ENDPOINT,
             api_key=config.AZURE_OPENAI_API_KEY,
             api_version="2024-02-01",
@@ -27,14 +27,14 @@ def _get_client() -> AzureOpenAI:
     return _client
 
 
-def generate_sql(question: str, schema_context: str) -> str:
+async def generate_sql(question: str, schema_context: str) -> str:
     system_prompt = load_prompt(PROMPT_PATH)
     schema_context = truncate_text(schema_context, max_tokens=2000)
 
     user_message = f"Table schema context:\n{schema_context}\n\nUser question: {question}"
 
     client = _get_client()
-    response = client.chat.completions.create(
+    response = await client.chat.completions.create(
         model=config.MODEL_DEPLOYMENT,
         messages=[
             {"role": "system", "content": system_prompt},
@@ -44,6 +44,6 @@ def generate_sql(question: str, schema_context: str) -> str:
         max_tokens=500,
     )
 
-    sql = response.choices[0].message.content.strip()
+    sql = (response.choices[0].message.content or "").strip()
     logger.info("Generated SQL: %s", sql)
     return sql
