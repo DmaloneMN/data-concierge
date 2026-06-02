@@ -1,7 +1,8 @@
 """Unit tests for agent tools."""
 
+import sys
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -204,3 +205,34 @@ def test_execute_sql_missing_config(monkeypatch):
 
     with pytest.raises(EnvironmentError, match="FABRIC_SQL_ENDPOINT and FABRIC_DATABASE"):
         _execute_sql_sync("SELECT 1")
+
+
+def test_execute_sql_truncates_results(monkeypatch):
+    cursor = MagicMock()
+    cursor.description = [("id",), ("name",)]
+    cursor.execute.return_value = None
+    cursor.fetchmany.return_value = [(1, "a"), (2, "b"), (3, "c")]
+    
+    connection = MagicMock()
+    connection.__enter__.return_value = connection
+    connection.__exit__.return_value = None
+    connection.cursor.return_value = cursor
+    
+    pyodbc = MagicMock()
+    pyodbc.connect.return_value = connection
+
+    monkeypatch.setattr(config, "FABRIC_SQL_ENDPOINT", "endpoint")
+    monkeypatch.setattr(config, "FABRIC_DATABASE", "database")
+    monkeypatch.setattr("src.agents.tools.execute_sql.MAX_ROWS", 2)
+    monkeypatch.setattr("src.agents.tools.execute_sql._get_token", lambda: b"token")
+    monkeypatch.setitem(sys.modules, "pyodbc", pyodbc)
+
+    result = _execute_sql_sync("SELECT id, name FROM sales.sales_fact")
+
+    assert result == {
+        "columns": ["id", "name"],
+        "rows": [{"id": 1, "name": "a"}, {"id": 2, "name": "b"}],
+        "row_count": 2,
+        "truncated": True,
+        "max_rows": 2,
+    }

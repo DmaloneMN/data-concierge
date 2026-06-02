@@ -11,6 +11,7 @@ from src.shared.logging import get_logger
 
 logger = get_logger(__name__)
 
+# SQL Server ODBC connection attribute for Azure AD access token authentication.
 SQL_COPT_SS_ACCESS_TOKEN = 1256
 MAX_ROWS = int(os.getenv("EXECUTE_SQL_MAX_ROWS", "500"))
 
@@ -54,11 +55,18 @@ def _execute_sql_sync(sql: str) -> dict:
             return {"columns": [], "rows": [], "row_count": 0}
 
         columns = [col[0] for col in cursor.description]
-        rows = cursor.fetchmany(MAX_ROWS)
-        results = [dict(zip(columns, row)) for row in rows]
+        rows = cursor.fetchmany(MAX_ROWS + 1)
+        truncated = len(rows) > MAX_ROWS
+        results = [dict(zip(columns, row)) for row in rows[:MAX_ROWS]]
 
     logger.info("execute_sql returned %d rows", len(results))
-    return {"columns": columns, "rows": results, "row_count": len(results)}
+    return {
+        "columns": columns,
+        "rows": results,
+        "row_count": len(results),
+        "truncated": truncated,
+        "max_rows": MAX_ROWS,
+    }
 
 
 async def execute_sql(sql: str) -> dict:

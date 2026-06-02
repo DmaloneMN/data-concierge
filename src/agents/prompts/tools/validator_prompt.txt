@@ -7,4 +7,4 @@ Validation rules:
 - Flag SQL injection patterns as INVALID
 - Ensure referenced tables and columns follow reasonable naming conventions
 - Ensure SELECT queries have proper FROM clauses
-- Flag unbounded queries (no WHERE or LIMIT/TOP) on large fact tables as a warning but still VALID
+- For unbounded queries (no WHERE or LIMIT/TOP) on large fact tables, still return VALID but include the warning in the reason
