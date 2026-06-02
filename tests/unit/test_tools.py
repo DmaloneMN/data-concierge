@@ -14,7 +14,7 @@ from src.agents.tools.validate_sql import validate_sql
 from src.shared.config import config
 
 
-def _mock_response(content: str):
+def _mock_openai_response(content: str):
     return SimpleNamespace(
         choices=[
             SimpleNamespace(
@@ -62,10 +62,11 @@ def test_get_table_schema_not_found(tmp_path, monkeypatch):
         get_table_schema("missing_table")
 
 
-def test_get_table_schema_missing_file(monkeypatch):
+def test_get_table_schema_missing_file(tmp_path, monkeypatch):
+    missing_path = tmp_path / "missing.csv"
     monkeypatch.setattr(
         "src.agents.tools.get_table_schema.METADATA_PATH",
-        "/tmp/does-not-exist/tables.csv",
+        str(missing_path),
     )
 
     with pytest.raises(FileNotFoundError, match="Metadata file not found"):
@@ -125,7 +126,9 @@ async def test_validate_sql_valid():
     mock_client = SimpleNamespace(
         chat=SimpleNamespace(
             completions=SimpleNamespace(
-                create=AsyncMock(return_value=_mock_response("VALID Safe read-only query"))
+                create=AsyncMock(
+                    return_value=_mock_openai_response("VALID Safe read-only query")
+                )
             )
         )
     )
@@ -140,6 +143,8 @@ async def test_validate_sql_valid():
         "valid": True,
         "reason": "VALID Safe read-only query",
     }
+    create_call = mock_client.chat.completions.create.await_args
+    assert "User intent: Show revenue" in create_call.kwargs["messages"][1]["content"]
 
 
 @pytest.mark.asyncio
@@ -147,7 +152,9 @@ async def test_validate_sql_invalid():
     mock_client = SimpleNamespace(
         chat=SimpleNamespace(
             completions=SimpleNamespace(
-                create=AsyncMock(return_value=_mock_response("INVALID Destructive statement"))
+                create=AsyncMock(
+                    return_value=_mock_openai_response("INVALID Destructive statement")
+                )
             )
         )
     )
@@ -169,7 +176,11 @@ async def test_generate_sql_returns_string():
     mock_client = SimpleNamespace(
         chat=SimpleNamespace(
             completions=SimpleNamespace(
-                create=AsyncMock(return_value=_mock_response("SELECT TOP 1 * FROM sales.sales_fact"))
+                create=AsyncMock(
+                    return_value=_mock_openai_response(
+                        "SELECT TOP 1 * FROM sales.sales_fact"
+                    )
+                )
             )
         )
     )

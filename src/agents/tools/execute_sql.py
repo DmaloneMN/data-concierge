@@ -29,7 +29,7 @@ def _execute_sql_sync(sql: str) -> dict:
         )
 
     try:
-        import pyodbc  # noqa: PLC0415
+        import pyodbc  # noqa: PLC0415 - imported lazily so non-SQL flows do not require pyodbc
     except ImportError as exc:
         raise ImportError(
             "pyodbc is required for execute_sql. Install it with: pip install pyodbc"
