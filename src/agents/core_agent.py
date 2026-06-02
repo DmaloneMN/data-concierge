@@ -3,14 +3,16 @@
 Uses Azure OpenAI function-calling to orchestrate tools.
 """
 
+import asyncio
+import inspect
 import json
 
-from openai import AzureOpenAI
+from openai import AsyncAzureOpenAI
 
 from src.agents.agent_config import AgentConfig
 from src.agents.tools.tool_registry import TOOL_CALLABLES, TOOLS
 from src.shared.logging import get_logger
-from src.shared.utils import load_prompt
+from src.shared.utils import format_schema_context, load_prompt
 
 logger = get_logger(__name__)
 
@@ -18,7 +20,7 @@ logger = get_logger(__name__)
 class CoreAgent:
     def __init__(self, config: AgentConfig | None = None):
         self.config = config or AgentConfig()
-        self.client = AzureOpenAI(
+        self.client = AsyncAzureOpenAI(
             azure_endpoint=self.config.azure_openai_endpoint,
             api_key=self.config.azure_openai_api_key,
             api_version="2024-02-01",
@@ -32,9 +34,10 @@ class CoreAgent:
         ]
 
         sql_generated: str | None = None
+        results_data: dict | None = None
 
         for _ in range(self.config.max_iterations):
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=self.config.model_deployment,
                 messages=messages,
                 tools=TOOLS,
@@ -54,20 +57,39 @@ class CoreAgent:
                     if tool_name not in TOOL_CALLABLES:
                         tool_result = f"Error: unknown tool '{tool_name}'"
                     else:
-                        tool_result = TOOL_CALLABLES[tool_name](**tool_args)
+                        fn = TOOL_CALLABLES[tool_name]
+                        try:
+                            if inspect.iscoroutinefunction(fn):
+                                tool_result = await fn(**tool_args)
+                            else:
+                                tool_result = await asyncio.to_thread(fn, **tool_args)
+                        except Exception as exc:
+                            logger.exception("Tool '%s' failed", tool_name)
+                            tool_result = f"Error running tool '{tool_name}': {exc}"
+
                         if tool_name == "generate_sql":
                             sql_generated = tool_result
+                        if tool_name == "execute_sql":
+                            results_data = tool_result
+
+                    tool_content = str(tool_result)
+                    if tool_name == "get_table_schema" and isinstance(tool_result, dict):
+                        tool_content = format_schema_context(tool_result)
 
                     messages.append(
                         {
                             "role": "tool",
                             "tool_call_id": tool_call.id,
-                            "content": str(tool_result),
+                            "content": tool_content,
                         }
                     )
 
             elif choice.finish_reason == "stop":
-                return {"answer": choice.message.content, "sql": sql_generated}
+                return {
+                    "answer": choice.message.content,
+                    "sql": sql_generated,
+                    "results": results_data,
+                }
 
             else:
                 logger.warning("Unexpected finish_reason: %s", choice.finish_reason)
@@ -76,4 +98,5 @@ class CoreAgent:
         return {
             "answer": "I was unable to fully answer your question. Please try rephrasing.",
             "sql": sql_generated,
+            "results": results_data,
         }

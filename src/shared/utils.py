@@ -45,3 +45,11 @@ def truncate_text(text: str, max_tokens: int = 3000) -> str:
         logger.warning("Truncating text from %s to %s chars", len(text), max_chars)
         return text[:max_chars] + "\n[TRUNCATED]"
     return text
+
+
+def format_schema_context(schema: dict) -> str:
+    """Format a schema dict as a readable string for LLM context."""
+    parts = []
+    for key, value in schema.items():
+        parts.append(f"{key}: {value}")
+    return "\n".join(parts)
