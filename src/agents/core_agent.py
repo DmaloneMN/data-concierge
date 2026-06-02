@@ -58,10 +58,14 @@ class CoreAgent:
                         tool_result = f"Error: unknown tool '{tool_name}'"
                     else:
                         fn = TOOL_CALLABLES[tool_name]
-                        if inspect.iscoroutinefunction(fn):
-                            tool_result = await fn(**tool_args)
-                        else:
-                            tool_result = await asyncio.to_thread(fn, **tool_args)
+                        try:
+                            if inspect.iscoroutinefunction(fn):
+                                tool_result = await fn(**tool_args)
+                            else:
+                                tool_result = await asyncio.to_thread(fn, **tool_args)
+                        except Exception as exc:
+                            logger.exception("Tool '%s' failed", tool_name)
+                            tool_result = f"Error running tool '{tool_name}': {exc}"
 
                         if tool_name == "generate_sql":
                             sql_generated = tool_result

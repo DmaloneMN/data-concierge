@@ -56,7 +56,7 @@ TOOLS = [
                     },
                     "schema_context": {
                         "type": "string",
-                        "description": "Schema metadata for relevant tables, formatted as a string.",
+                        "description": "Schema metadata for relevant tables, formatted as key-value pairs with one field per line.",
                     },
                 },
                 "required": ["question", "schema_context"],

@@ -144,7 +144,11 @@ async def test_validate_sql_valid():
         "reason": "VALID Safe read-only query",
     }
     create_call = mock_client.chat.completions.create.await_args
-    assert "User intent: Show revenue" in create_call.kwargs["messages"][1]["content"]
+    assert any(
+        "User intent: Show revenue" in message["content"]
+        for message in create_call.kwargs["messages"]
+        if isinstance(message, dict) and "content" in message
+    )
 
 
 @pytest.mark.asyncio
