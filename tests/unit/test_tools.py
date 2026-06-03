@@ -115,11 +115,54 @@ def test_search_metric_definition_no_match(tmp_path, monkeypatch):
 
 
 def test_create_ticket_returns_stub():
-    result = create_ticket("Broken dashboard", "Revenue metric is wrong.")
+    with (
+        patch("src.agents.tools.create_ticket.ADO_ORG_URL", ""),
+        patch("src.agents.tools.create_ticket.ADO_PROJECT", ""),
+        patch("src.agents.tools.create_ticket.ADO_PAT", ""),
+    ):
+        result = create_ticket("Broken dashboard", "Revenue metric is wrong.")
 
     assert result["ticket_id"].startswith("STUB-")
     assert result["status"] == "created"
     assert result["title"] == "Broken dashboard"
+    assert result["source"] == "stub"
+
+
+def test_create_ticket_ado_success():
+    """create_ticket calls ADO API when credentials are configured."""
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        "id": 42,
+        "_links": {"html": {"href": "https://dev.azure.com/org/proj/_workitems/edit/42"}},
+    }
+    mock_response.raise_for_status = MagicMock()
+
+    with (
+        patch("src.agents.tools.create_ticket.ADO_ORG_URL", "https://dev.azure.com/org"),
+        patch("src.agents.tools.create_ticket.ADO_PROJECT", "Proj"),
+        patch("src.agents.tools.create_ticket.ADO_PAT", "token"),
+        patch("httpx.patch", return_value=mock_response),
+    ):
+        from src.agents.tools.create_ticket import _create_ado_ticket
+
+        result = _create_ado_ticket("Test bug", "Something broke")
+
+    assert result["ticket_id"] == "42"
+    assert result["source"] == "azure_devops"
+    assert "url" in result
+
+
+def test_create_ticket_ado_fallback_to_stub():
+    """create_ticket falls back to stub when ADO env vars are missing."""
+    with (
+        patch("src.agents.tools.create_ticket.ADO_ORG_URL", ""),
+        patch("src.agents.tools.create_ticket.ADO_PROJECT", ""),
+        patch("src.agents.tools.create_ticket.ADO_PAT", ""),
+    ):
+        result = create_ticket("Test", "Description")
+
+    assert result["source"] == "stub"
+    assert result["ticket_id"].startswith("STUB-")
 
 
 @pytest.mark.asyncio
@@ -211,7 +254,6 @@ def test_execute_sql_truncates_results(monkeypatch):
     cursor = MagicMock()
     cursor.description = [("id",), ("name",)]
     cursor.execute.return_value = None
-    # Return MAX_ROWS + 1 rows so execute_sql can flag truncation.
     cursor.fetchmany.return_value = [(1, "a"), (2, "b"), (3, "c")]
 
     connection = MagicMock()
