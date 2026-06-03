@@ -141,7 +141,7 @@ def test_create_ticket_ado_success():
         patch("src.agents.tools.create_ticket.ADO_ORG_URL", "https://dev.azure.com/org"),
         patch("src.agents.tools.create_ticket.ADO_PROJECT", "Proj"),
         patch("src.agents.tools.create_ticket.ADO_PAT", "token"),
-        patch("httpx.patch", return_value=mock_response),
+        patch("src.agents.tools.create_ticket.httpx.patch", return_value=mock_response),
     ):
         from src.agents.tools.create_ticket import _create_ado_ticket
 
