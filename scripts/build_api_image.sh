@@ -36,6 +36,10 @@ if [[ -z "$ACR_NAME" ]]; then
   fi
 
   echo "Resolving ACR_NAME from resource group '$RG'"
+  acr_count="$(az acr list -g "$RG" --query 'length(@)' -o tsv)"
+  if [[ "$acr_count" -gt 1 ]]; then
+    echo "Warning: found $acr_count registries in '$RG'; using the first result. Set ACR_NAME explicitly to override." >&2
+  fi
   ACR_NAME="$(az acr list -g "$RG" --query '[0].name' -o tsv)"
 fi
 

@@ -230,7 +230,7 @@ az deployment group create \
 
 For a first-time deploy that also creates ACR, use a temporary bootstrap image, then remote-build the API image and update the Container App.
 
-The default script uses `ACR_SKU=Premium` because some subscriptions reject lower tiers with `SkuNotSupported`; adjust only if your subscription allows another supported SKU.
+The default script uses `ACR_SKU=Premium` because some subscriptions reject lower tiers such as `Basic` or `Standard` with `SkuNotSupported`; adjust only if your subscription allows another supported SKU.
 
 ### 2. Build and push the API image with ACR remote build
 
@@ -248,6 +248,8 @@ az acr build \
 
 Use `az acr build` in restricted environments where a local Docker daemon is unavailable.
 
+The `az acr list ... [0]` lookup assumes there is a single registry in the resource group. If you have more than one, set `ACR_NAME` explicitly before running the command or script.
+
 ### 3. Update the Container App image
 
 ```bash
@@ -259,6 +261,8 @@ az containerapp update \
   --name "$CONTAINER_APP_NAME" \
   --image "$API_IMAGE"
 ```
+
+The `az containerapp list ... [0]` lookup assumes there is a single Container App in the resource group. If you have more than one, set `CONTAINER_APP_NAME` explicitly.
 
 ### 4. Deploy Function App code
 

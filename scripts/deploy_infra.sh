@@ -14,7 +14,7 @@ Optional environment variables:
   ENVIRONMENT_NAME  Environment name passed to Bicep (default: dev)
   NAME_PREFIX       Resource name prefix (default: dc)
   MODEL_DEPLOYMENT  Azure OpenAI model deployment (default: gpt-4o)
-  ACR_SKU           ACR SKU (default: Premium)
+  ACR_SKU           ACR SKU (default: Premium, because some subscriptions reject Basic/Standard with SkuNotSupported)
 
 Runs:
   az deployment group create --template-file infra/bicep/main.bicep
