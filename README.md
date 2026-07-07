@@ -181,43 +181,116 @@ pytest tests/integration/   # Requires Azure credentials
 
 ## Deployment
 
-### 1. Infrastructure (Bicep)
+### Prerequisites
+
+- Azure CLI with Bicep support
+- Azure Functions Core Tools
+- Logged into the correct Azure subscription context (`az login`, `az account set --subscription <id>`)
+
+### Environment setup
 
 ```bash
-# Login to Azure
-az login
-az account set --subscription <your-subscription-id>
+export RG="rg-data-concierge-dev"
+export LOCATION="eastus"
+export ENVIRONMENT_NAME="dev"
+export NAME_PREFIX="dc"
+export MODEL_DEPLOYMENT="gpt-4o"
+export ACR_SKU="Premium"
+export IMAGE_NAME="data-concierge-api"
+export IMAGE_TAG="dev"
+export AZURE_OPENAI_ENDPOINT="https://<your-resource>.openai.azure.com/openai/v1"
+export AZURE_OPENAI_API_KEY="<your-api-key>"
+export FUNCTION_APP_NAME="<your-function-app-name>"
+export API_IMAGE="mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"  # bootstrap image for first infra deploy
+```
 
-# Create resource group
-az group create --name rg-data-concierge-dev --location eastus
+### 1. Deploy infrastructure (Bicep)
 
-# Deploy all infrastructure
+```bash
+az group create --name "$RG" --location "$LOCATION"
+
+./scripts/deploy_infra.sh
+
+# Equivalent Azure CLI command
 az deployment group create \
-  --resource-group rg-data-concierge-dev \
+  --resource-group "$RG" \
   --template-file infra/bicep/main.bicep \
-  --parameters @infra/environments/dev.json
+  --parameters \
+    environmentName="$ENVIRONMENT_NAME" \
+    location="$LOCATION" \
+    namePrefix="$NAME_PREFIX" \
+    modelDeployment="$MODEL_DEPLOYMENT" \
+    azureOpenAiEndpoint="$AZURE_OPENAI_ENDPOINT" \
+    azureOpenAiApiKey="$AZURE_OPENAI_API_KEY" \
+    acrSku="$ACR_SKU" \
+    apiImage="$API_IMAGE"
 ```
 
-### 2. Build & Push Container Image
+`apiImage` must be non-empty for the Container App deployment. If you see `ContainerAppImageRequired`, provide a fully-qualified image reference. For a first-time deploy that also creates ACR, use a temporary bootstrap image, then remote-build the API image and update the Container App. The default script uses `ACR_SKU=Premium` because some subscriptions reject lower tiers with `SkuNotSupported`; adjust only if your subscription allows another supported SKU.
+
+### 2. Build and push the API image with ACR remote build
 
 ```bash
-# Build the Docker image
-docker build -t data-concierge-api .
+export ACR_NAME="$(az acr list -g "$RG" --query "[0].name" -o tsv)"
 
-# Tag and push to Azure Container Registry
-az acr login --name <your-acr-name>
-docker tag data-concierge-api <your-acr-name>.azurecr.io/data-concierge-api:latest
-docker push <your-acr-name>.azurecr.io/data-concierge-api:latest
+./scripts/build_api_image.sh
+
+# Equivalent remote build (no local Docker daemon required)
+az acr build \
+  --registry "$ACR_NAME" \
+  --image "${IMAGE_NAME}:${IMAGE_TAG}" \
+  .
 ```
 
-### 3. Deploy Azure Functions (Tool Implementations)
+Use `az acr build` in restricted environments where a local Docker daemon is unavailable.
+
+### 3. Update the Container App image
 
 ```bash
+CONTAINER_APP_NAME="$(az containerapp list -g "$RG" --query "[0].name" -o tsv)"
+export API_IMAGE="${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}"
+
+az containerapp update \
+  --resource-group "$RG" \
+  --name "$CONTAINER_APP_NAME" \
+  --image "$API_IMAGE"
+```
+
+### 4. Deploy Function App code
+
+```bash
+./scripts/deploy_function.sh
+
+# Equivalent publish command from the Function project root
 cd src/tools
-func azure functionapp publish <your-function-app-name>
+func azure functionapp publish "$FUNCTION_APP_NAME" --python
 ```
 
-### 4. CI/CD (GitHub Actions)
+Run the publish command from the Function project root that contains `host.json`.
+
+### Validation
+
+```bash
+CONTAINER_APP_NAME="$(az containerapp list -g "$RG" --query "[0].name" -o tsv)"
+
+az containerapp revision list -g "$RG" -n "$CONTAINER_APP_NAME" -o table
+az containerapp logs show -g "$RG" -n "$CONTAINER_APP_NAME" --tail 100
+
+az functionapp show -g "$RG" -n "$FUNCTION_APP_NAME" --query defaultHostName -o tsv
+az functionapp function list -g "$RG" -n "$FUNCTION_APP_NAME" --query "[].name" -o table
+
+# Replace <function-name> and add a function key if required by authLevel=function.
+echo "https://${FUNCTION_APP_NAME}.azurewebsites.net/api/<function-name>?code=<function-key>"
+```
+
+### Troubleshooting
+
+- `SkuNotSupported`: retry infra deployment with `ACR_SKU=Premium` (the default in `scripts/deploy_infra.sh`) or another SKU allowed by your subscription/region.
+- `ContainerAppImageRequired`: pass a non-empty `API_IMAGE` such as `<acr>.azurecr.io/data-concierge-api:dev`.
+- `docker daemon` unavailable: use `az acr build` instead of `docker build`/`docker push`.
+- `Unable to find project root`: run `func azure functionapp publish` from the directory that contains `host.json`.
+
+### CI/CD (GitHub Actions)
 
 The pipelines in `infra/pipelines/` automate the above:
 
