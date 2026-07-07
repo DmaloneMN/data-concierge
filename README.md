@@ -201,7 +201,7 @@ export IMAGE_TAG="dev"
 export AZURE_OPENAI_ENDPOINT="https://<your-resource>.openai.azure.com/"
 export AZURE_OPENAI_API_KEY="<your-api-key>"
 export FUNCTION_APP_NAME="<your-function-app-name>"
-export API_IMAGE="mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"  # bootstrap image for first infra deploy
+export API_IMAGE="mcr.microsoft.com/azuredocs/containerapps-helloworld:latest"  # temporary bootstrap image until ACR is ready
 ```
 
 ### 1. Deploy infrastructure (Bicep)
@@ -226,7 +226,11 @@ az deployment group create \
     apiImage="$API_IMAGE"
 ```
 
-`apiImage` must be non-empty for the Container App deployment. If you see `ContainerAppImageRequired`, provide a fully-qualified image reference. For a first-time deploy that also creates ACR, use a temporary bootstrap image, then remote-build the API image and update the Container App. The default script uses `ACR_SKU=Premium` because some subscriptions reject lower tiers with `SkuNotSupported`; adjust only if your subscription allows another supported SKU.
+`apiImage` must be non-empty for the Container App deployment. If you see `ContainerAppImageRequired`, provide a fully-qualified image reference.
+
+For a first-time deploy that also creates ACR, use a temporary bootstrap image, then remote-build the API image and update the Container App.
+
+The default script uses `ACR_SKU=Premium` because some subscriptions reject lower tiers with `SkuNotSupported`; adjust only if your subscription allows another supported SKU.
 
 ### 2. Build and push the API image with ACR remote build
 
@@ -279,8 +283,9 @@ az containerapp logs show -g "$RG" -n "$CONTAINER_APP_NAME" --tail 100
 az functionapp show -g "$RG" -n "$FUNCTION_APP_NAME" --query defaultHostName -o tsv
 az functionapp function list -g "$RG" -n "$FUNCTION_APP_NAME" --query "[].name" -o table
 
-# Replace <function-name> and add a function key if required by authLevel=function.
-echo "https://${FUNCTION_APP_NAME}.azurewebsites.net/api/<function-name>?code=<function-key>"
+export FUNCTION_NAME="<function-name>"
+export FUNCTION_KEY="<function-key>"
+echo "https://${FUNCTION_APP_NAME}.azurewebsites.net/api/${FUNCTION_NAME}?code=${FUNCTION_KEY}"
 ```
 
 ### Troubleshooting
