@@ -5,7 +5,7 @@ usage() {
   cat <<'USAGE'
 Usage:
   export RG="rg-data-concierge-dev"
-  export AZURE_OPENAI_ENDPOINT="https://<your-resource>.openai.azure.com/openai/v1"
+  export AZURE_OPENAI_ENDPOINT="https://<your-resource>.openai.azure.com/"
   export AZURE_OPENAI_API_KEY="<your-api-key>"
   export API_IMAGE="<acr>.azurecr.io/data-concierge-api:dev"
 
